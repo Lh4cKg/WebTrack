@@ -1,28 +1,61 @@
-from PySide6 import QtCore, QtWidgets
+import sys
+
+from PySide6 import QtCore, QtWidgets, QtGui
 
 
 class WebTrackWidget(QtWidgets.QWidget):
+
     def __init__(self):
         super().__init__()
-        self.layout = QtWidgets.QVBoxLayout(self)
-        self.main_menu_bar = QtWidgets.QMenuBar()
-        file_menu = QtWidgets.QMenu('File')
-        file_menu.addMenu('New')
+        self.layout = QtWidgets.QGridLayout(self)
+        # self.layout.setDirection(
+        #     QtWidgets.QBoxLayout.Direction.TopToBottom
+        # )
+
+        self.main_menu_bar = QtWidgets.QMenuBar(self)
+        self.main_menu_bar.setStyleSheet("""
+            QMenuBar {
+                background-color: red;
+                margin: 0;
+                margin-left: 0;
+                padding: 0;
+                bottom: 0;
+            }
+        """)
+        # self.main_menu_bar.setMaximumHeight(30)
+        # self.setLayoutDirection(QtCore.Qt.LayoutDirection.LayoutDirectionAuto)
+
+        file_menu = QtWidgets.QMenu('File', self)
+        # Sub Menu Items
+        new_project_action = QtGui.QAction('New Project', self)
+        new_project_action.triggered.connect(self.new_project_action)
+        file_menu.addAction(new_project_action)
+
         file_menu.addMenu('Recent Projects')
+        exit_act = QtGui.QAction('Exit', self)
+        exit_act.triggered.connect(self.exit)
+        file_menu.addAction(exit_act)
+
         self.main_menu_bar.addMenu(file_menu)
         self.main_menu_bar.addMenu('View')
         self.main_menu_bar.addMenu('Tools')
         self.main_menu_bar.addMenu('Help')
+
         self.layout.setMenuBar(self.main_menu_bar)
 
-        tabs = QtWidgets.QTabBar()
-        # tab = QtWidgets.QTabWidget()
-        # tab.setTabText('Projects Tabs')
-        # tabs.setTabText(0, 'Projects Tabs')
-        tabs.addTab('tab 1')
-        # tabs.addTab('tab 2')
-        self.layout.addWidget(tabs)
+        # Create Tabs Widget
+        self.tabs = QtWidgets.QTabWidget(self)
+        self.layout.addWidget(self.tabs)
 
+        # self.text = QtWidgets.QLabel(
+        #     'WebTrack', alignment=QtCore.Qt.AlignCenter
+        # )
+        # self.layout.addWidget(self.text)
+
+    def __init_project_tab(self, dlg: QtWidgets.QInputDialog):
+        tab = QtWidgets.QWidget(self)
+        tab.setWindowTitle(dlg.textValue())
+        self.tabs.addTab(tab, dlg.textValue())
         # BoxLayout for project configuration
         self.project_layout = QtWidgets.QBoxLayout(
             QtWidgets.QBoxLayout.Direction.LeftToRight
@@ -40,12 +73,13 @@ class WebTrackWidget(QtWidgets.QWidget):
         self.project_path.setFocus()
         self.project_path.setPlaceholderText('Enter Absolute Path')
         self.project_path.setStyleSheet("""
-            QLineEdit { 
-                width: 100%;
-                background-color: white;
-                color: black; 
-            }
-        """)
+                    QLineEdit { 
+                        width: 100%;
+                        background-color: white;
+                        color: black; 
+                    }
+                """)
+
         # self.project_path.setAccessibleName('Choose Project Directory')
         # self.project_path = QtWidgets.QInputDialog()
         # self.project_path.setOption(
@@ -64,14 +98,59 @@ class WebTrackWidget(QtWidgets.QWidget):
         self.project_layout.addWidget(self.project_path)
         self.project_layout.addWidget(self.btn_chd)
 
-        self.layout.addLayout(self.project_layout)
+        tab.setLayout(self.project_layout)
 
-        self.text = QtWidgets.QLabel(
-            'WebTrack', alignment=QtCore.Qt.AlignCenter
-        )
-        self.layout.addWidget(self.text)
+        self.tabs.update()
+        self.layout.update()
 
     @QtCore.Slot()
     def choose_dir(self):
         file_dialog = QtWidgets.QFileDialog()
         self.project_path.setText(file_dialog.getExistingDirectory())
+
+    @QtCore.Slot()
+    def new_project_action(self):
+        dlg = QtWidgets.QInputDialog()
+        dlg.setWindowTitle('New Project')
+        dlg.setMaximumWidth(400)
+        dlg.setMaximumHeight(200)
+
+        if dlg.exec_():
+            # Remove Text Notification Widget
+            # self.layout.removeWidget(self.text)
+            self.__init_project_instance(dlg)
+        else:
+            print("Cancel!")
+
+    @QtCore.Slot()
+    def exit(self, s):
+        msg_box = QtWidgets.QMessageBox()
+        msg_box.setWindowTitle('Exit')
+        msg_box.setText('Do you want to exit the application?')
+        exit_btn = msg_box.addButton(
+            'Exit', QtWidgets.QMessageBox.ButtonRole.YesRole
+        )
+        msg_box.addButton(
+            'Cancel', QtWidgets.QMessageBox.ButtonRole.RejectRole
+        )
+        msg_box.exec_()
+
+        if msg_box.clickedButton() == exit_btn:
+            sys.exit(s)
+
+    def closeEvent(self, event):
+        msg_box = QtWidgets.QMessageBox()
+        msg_box.setWindowTitle('Exit')
+        msg_box.setText('Do you want to exit the application?')
+        exit_btn = msg_box.addButton(
+            'Exit', QtWidgets.QMessageBox.ButtonRole.YesRole
+        )
+        cancel_btn = msg_box.addButton(
+            'Cancel', QtWidgets.QMessageBox.ButtonRole.RejectRole
+        )
+        msg_box.exec_()
+
+        if msg_box.clickedButton() == exit_btn:
+            event.accept()
+        elif msg_box.clickedButton() == cancel_btn:
+            event.ignore()

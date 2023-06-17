@@ -11,7 +11,7 @@ def main():
     # qs.setProperty('background-color', 'red')
     # QtWidgets.QApplication.setStyle(qs)
 
-    app = QtWidgets.QApplication([])
+    app = QtWidgets.QApplication(sys.argv)
     app.setApplicationDisplayName('WebTrack')
 
     # Application Icon
