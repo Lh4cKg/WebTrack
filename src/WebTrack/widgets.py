@@ -3,6 +3,22 @@ import sys
 from PySide6 import QtCore, QtWidgets, QtGui
 
 
+class WebTrackTabWidget(QtWidgets.QWidget):
+
+    def __init__(self, title):
+        super().__init__()
+        self.title = title
+        self.setLayoutDirection(
+            QtCore.Qt.LayoutDirection.LayoutDirectionAuto
+        )
+        self.setStyleSheet("""
+            QWidget {
+                background-color: green;
+            }
+        """)
+        self.setWindowTitle(self.title)
+
+
 class WebTrackWidget(QtWidgets.QWidget):
 
     def __init__(self):
@@ -45,6 +61,11 @@ class WebTrackWidget(QtWidgets.QWidget):
 
         # Create Tabs Widget
         self.tabs = QtWidgets.QTabWidget(self)
+        # self.tabs.setLayoutDirection(
+        #     QtCore.Qt.LayoutDirection.LayoutDirectionAuto
+        # )
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.close_tab)
         self.layout.addWidget(self.tabs)
 
         # self.text = QtWidgets.QLabel(
@@ -52,33 +73,58 @@ class WebTrackWidget(QtWidgets.QWidget):
         # )
         # self.layout.addWidget(self.text)
 
-    def __init_project_tab(self, dlg: QtWidgets.QInputDialog):
-        tab = QtWidgets.QWidget(self)
-        tab.setWindowTitle(dlg.textValue())
-        self.tabs.addTab(tab, dlg.textValue())
-        # BoxLayout for project configuration
-        self.project_layout = QtWidgets.QBoxLayout(
-            QtWidgets.QBoxLayout.Direction.LeftToRight
+    @QtCore.Slot()
+    def close_tab(self, index):
+        msg_box = QtWidgets.QMessageBox()
+        msg_box.setWindowTitle('Exit')
+        title = self.tabs.widget(index).title
+        msg_box.setText(f'Do you want to close the {title} tab?')
+        exit_btn = msg_box.addButton(
+            'Exit', QtWidgets.QMessageBox.ButtonRole.YesRole
         )
+        msg_box.addButton(
+            'Cancel', QtWidgets.QMessageBox.ButtonRole.RejectRole
+        )
+        msg_box.exec_()
+
+        if msg_box.clickedButton() == exit_btn:
+            self.tabs.removeTab(index)
+
+    def _init_project_tab(self, dlg: QtWidgets.QInputDialog):
+        self.tab = WebTrackTabWidget(title=dlg.textValue())
+        self.tabs.addTab(self.tab, dlg.textValue())
+        # BoxLayout for project configuration
+        # self.project_layout = QtWidgets.QBoxLayout(
+        #     QtWidgets.QBoxLayout.Direction.LeftToRight
+        # )
+        self.project_layout = QtWidgets.QFormLayout()
+        # x=0, y=0, w=0, h=0
+        # self.setGeometry(0, 0, 800, 600)
 
         # Input Dialog
         self.project_path = QtWidgets.QLineEdit()
         # QtCore.Qt.WidgetAttribute
-        label = QtWidgets.QLabel("Project Dir")
-        label.setText(f"<font color='red'>*</font> {label.text()}")
-        label.setStyleSheet('QLabel {color: black;}')
-        self.project_layout.addWidget(label)
+        label_pp = QtWidgets.QLabel("Project Dir")
+        label_pp.setText(f"<font color='red'>*</font> {label_pp.text()}")
+        label_pp.setStyleSheet('QLabel {color: black;}')
+
+        # self.project_layout.addWidget(label)
+        self.project_layout.setWidget(
+            0, QtWidgets.QFormLayout.ItemRole.LabelRole, label_pp
+        )
+
         self.project_path.setDragEnabled(True)
         self.project_path.setEnabled(True)
         self.project_path.setFocus()
         self.project_path.setPlaceholderText('Enter Absolute Path')
         self.project_path.setStyleSheet("""
-                    QLineEdit { 
-                        width: 100%;
-                        background-color: white;
-                        color: black; 
-                    }
-                """)
+            QLineEdit { 
+                width: 100%;
+                background-color: white;
+                color: black; 
+                margin-top: 0;
+            }
+        """)
 
         # self.project_path.setAccessibleName('Choose Project Directory')
         # self.project_path = QtWidgets.QInputDialog()
@@ -95,10 +141,41 @@ class WebTrackWidget(QtWidgets.QWidget):
         self.btn_chd.setMaximumWidth(100)
         self.btn_chd.clicked.connect(self.choose_dir)
 
-        self.project_layout.addWidget(self.project_path)
-        self.project_layout.addWidget(self.btn_chd)
+        # Button for Input Dialog
+        website = QtWidgets.QLineEdit()
+        label_ws = QtWidgets.QLabel("Website")
+        label_ws.setText(f"<font color='red'>*</font> {label_ws.text()}")
+        label_ws.setStyleSheet('QLabel {color: black;}')
 
-        tab.setLayout(self.project_layout)
+        self.project_layout.setWidget(
+            2, QtWidgets.QFormLayout.ItemRole.LabelRole, label_ws
+        )
+        self.project_layout.setWidget(
+            2, QtWidgets.QFormLayout.ItemRole.FieldRole, website
+        )
+
+        self.enable_selenium = QtWidgets.QCheckBox()
+        self.enable_selenium.setText('Enable Selenium')
+        self.enable_selenium.setToolTip('Enable Selenium Driver')
+        self.project_layout.setWidget(
+            3, QtWidgets.QFormLayout.ItemRole.FieldRole, self.enable_selenium
+        )
+        self.enable_selenium.clicked.connect(self.show_driver_path)
+        self.selenium_driver_path = QtWidgets.QLineEdit()
+        self.sdp_label = QtWidgets.QLabel("Driver Path")
+        self.sdp_label.setText(f"<font color='red'>*</font> {self.sdp_label.text()}")
+        self.sdp_label.setStyleSheet('QLabel {color: black;}')
+
+        # self.project_layout.addWidget(self.project_path)
+        # self.project_layout.addWidget(self.btn_chd)
+        self.project_layout.setWidget(
+            0, QtWidgets.QFormLayout.ItemRole.FieldRole, self.project_path
+        )
+        self.project_layout.setWidget(
+            1, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.btn_chd
+        )
+
+        self.tab.setLayout(self.project_layout)
 
         self.tabs.update()
         self.layout.update()
@@ -107,6 +184,23 @@ class WebTrackWidget(QtWidgets.QWidget):
     def choose_dir(self):
         file_dialog = QtWidgets.QFileDialog()
         self.project_path.setText(file_dialog.getExistingDirectory())
+
+    @QtCore.Slot()
+    def show_driver_path(self, checked):
+        if checked:
+            self.project_layout.setWidget(
+                4, QtWidgets.QFormLayout.ItemRole.LabelRole, self.sdp_label
+            )
+            self.project_layout.setWidget(
+                4, QtWidgets.QFormLayout.ItemRole.FieldRole, self.selenium_driver_path
+            )
+        else:
+            self.project_layout.removeWidget(self.sdp_label)
+            self.project_layout.removeWidget(self.selenium_driver_path)
+            self.project_layout.update()
+            self.tab.update()
+            self.tabs.update()
+            self.layout.update()
 
     @QtCore.Slot()
     def new_project_action(self):
@@ -118,7 +212,7 @@ class WebTrackWidget(QtWidgets.QWidget):
         if dlg.exec_():
             # Remove Text Notification Widget
             # self.layout.removeWidget(self.text)
-            self.__init_project_instance(dlg)
+            self._init_project_tab(dlg)
         else:
             print("Cancel!")
 
